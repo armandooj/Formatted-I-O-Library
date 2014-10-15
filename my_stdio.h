@@ -2,13 +2,18 @@
 /*
 Structure containing all the required fields.
 */
-typedef struct my_file_t *MY_FILE;
+
+typedef struct {
+	char *buffer;
+	char *name;
+	char *mode;
+} MY_FILE;
 
 /*
 Opens an access to a file, where name is the path of the file and mode is either ”r” for read or ”w” for write. 
 Returns a pointer to a MY FILE structure upon success and NULL otherwise.
 */
-my_file_t *my_fopen(char *name, char *mode);
+MY_FILE *my_fopen(char *name, char *mode);
 
 /*
 Closes the access to a file associated to f. Returns 0 upon success and -1 otherwise.

@@ -3,16 +3,10 @@
 
 #define BUFFER_SIZE 64
 
-typedef struct my_file {
-	char *buffer;
-	char *name;
-	char *mode;
-} my_file_s, *my_file_t;
-
-my_file_t *my_fopen(char *name, char *mode) {
+MY_FILE *my_fopen(char *name, char *mode) {
 	// Here we need to initialize the buffer
 	// Open + what is needed to initialize the structure
-	my_file_t new_file = (my_file_t)malloc(sizeof(my_file_s));
+	MY_FILE *new_file = (MY_FILE *)malloc(sizeof(MY_FILE));
 	new_file->buffer = (char *)malloc(sizeof(char)*BUFFER_SIZE);
 	new_file->name = name;
 	new_file->mode = mode;
