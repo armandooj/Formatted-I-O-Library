@@ -8,6 +8,7 @@
 #define BUFFER_SIZE 64
 
 MY_FILE *my_fopen(char *name, char *mode) {
+			printf("OPEN ");
 	// Here we need to initialize the buffer
 	// Open + what is needed to initialize the structure
 	MY_FILE *new_file = (MY_FILE *)malloc(sizeof(MY_FILE));
@@ -20,7 +21,6 @@ MY_FILE *my_fopen(char *name, char *mode) {
 
 	// Open the file -> kernel mode
 	printf("* %s *\n", name);
-
 
 	int flag;
 	if (*mode == 'r') {
@@ -35,13 +35,9 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	if (inf == -1) {
 		printf("Error opening file %s.\n", name);
 		return NULL;
-	} else {
-		// Read from the file
-		ssize_t size = pread(inf, new_file->buffer, BUFFER_SIZE, new_file->offset);
-		//ssize_t size = read(inf, new_file->buffer, BUFFER_SIZE);
-		printf("-> %zd %c\n", size, new_file->buffer[0]);
-	}
-
+		}
+	new_file->fd = inf;
+		printf("OPEN OK\n");
 	return new_file;
 }
 
@@ -53,19 +49,20 @@ int my_fclose(MY_FILE *f) {
 }
 
 int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
-	// If it's empty or there's not enough data we make the system call
-	// Compute how much we need to read
-	if (size * nbelem <= BUFFER_SIZE - f->end_buffer) {
-		// We can read from our buffer
-		
-	}
-	// if there's enought space, if there's not enought, if it's full
+	
+	return read(f->fd,p,size*nbelem);
 
-	return 0;
 }
-
-int my_fwrite(void *p, size_t taille, size_t nbelem, MY_FILE *f) {
+/*
+int doit(int fd, const void *buf, size_t count){
+	write(fd,buf,count);
 	return 0;
+	}*/
+
+int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
+	
+	return write(f->fd,p,size*nbelem);
+
 }
 
 int my_feof(MY_FILE *f) {

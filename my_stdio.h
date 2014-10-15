@@ -8,7 +8,7 @@ typedef struct {
 	char *buffer;
 	char *name;
 	char *mode;
-	// Reference to the current position in the actual file
+	int	fd;
 	off_t offset;
 	int end_buffer;
 } MY_FILE;
