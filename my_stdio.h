@@ -1,4 +1,5 @@
 #include "stddef.h"
+#include <fcntl.h>
 /*
 Structure containing all the required fields.
 */
@@ -7,6 +8,9 @@ typedef struct {
 	char *buffer;
 	char *name;
 	char *mode;
+	// Reference to the current position in the actual file
+	off_t offset;
+	int end_buffer;
 } MY_FILE;
 
 /*
