@@ -21,7 +21,8 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	new_file->buffer = (char *)malloc(sizeof(char)*BUFFER_SIZE);
 	new_file->name = name;
 	new_file->mode = mode;
-	new_file->buff_offset = 0;
+	// An offset of 0 is going to mean that we haven't read from the file yet
+	new_file->buff_offset = -1;
 
 	// Open the file -> kernel mode
 	int flag;
@@ -42,7 +43,7 @@ MY_FILE *my_fopen(char *name, char *mode) {
 		new_file->fd = inf;
 
 		// Should this be here?
-		refill_buffer(new_file);
+		// refill_buffer(new_file);
 	}
 	
 	return new_file;
@@ -50,7 +51,9 @@ MY_FILE *my_fopen(char *name, char *mode) {
 
 void refill_buffer(MY_FILE *f) {
 	// TODO validate it's not < 0
+	// TODO if there's something in the buffer, buffer offset is less than buffer size, then we have to keep that in the new buffer
 	read(f->fd, f->buffer, BUFFER_SIZE);
+	f->buff_offset = 0;
 }
 
 /*
@@ -72,25 +75,28 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		char *content;
 		// Proceed reading one by one
 		while (nbelem > 0) {
-			// Try to read from the buffer
-			if (BUFFER_SIZE - f->buff_offset >= (int)size) {
-				/*
-				char temp[(int)size];
-				memcpy(temp, f->buffer[f->buff_offset], (int)size);
-				// TODO end of line?
-				strcat(content, temp);
-				*/
-				// try +=
-			} 
 			// Not enough data in the buffer. We must "reload" it
-			else {
+			if (BUFFER_SIZE - f->buff_offset < (int)size || f->buff_offset == -1) {
+				printf("Not enough data in buffer.\n");
 				refill_buffer(f);	
 			}
-			p = content;
+
+			// Try to read from the buffer
+			printf("Read from buffer..\n");
+
+			char temp[(int)size];
+			strncpy(temp, f->buffer + f->buff_offset, (int)size);
+			// strcat(temp, '\0');
+			f->buff_offset += (int)size;
+			// memcpy(temp, f->buffer[f->buff_offset], (int)size);
+			// TODO end of line?
+			// strcat(content, temp);
+			printf("** %s\n", temp);
+			// try +=
 			nbelem--;			
 		}
+		p = content;
 	} else {
-		printf("asdfasfasfasdf\n");
 		return -1;
 	}
 	
