@@ -1,11 +1,14 @@
 #include <stdlib.h>
 #include "my_stdio.h"
 
+// Printing
+#include <stdio.h>
+
 int main (int argc, char *argv[])
 {
   MY_FILE *f1;
   MY_FILE *f2;
-  char c;
+  char *c = (char *)malloc(sizeof(char));
   int result;
 
   // for the sake of simplicity we don't
@@ -21,8 +24,11 @@ int main (int argc, char *argv[])
   if (f2 == NULL)
       exit (-3);
 
-  result = my_fread(&c, 1, 4, f1);
-  result = my_fwrite(&c, 1, 1, f2);
+  result = my_fread(c, 3, 3, f1);
+  // result = my_fwrite(c, 1, 1, f2);
+
+  printf("%s\n", c);
+  free(c);
  
   /*
   result = my_fread(&c, 1, 1, f1);

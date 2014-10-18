@@ -72,42 +72,39 @@ Returns the number of elements actually read, 0 if an end-of-file has been encou
 int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 	
 	if (*f->mode == 'r') {
-		char *content;
+		int no_elements = nbelem;
+		char *content = (char *)malloc(sizeof(char));
+		
 		// Proceed reading one by one
-		while (nbelem > 0) {
+		while (no_elements > 0) {
 			// Not enough data in the buffer. We must "reload" it
 			if (BUFFER_SIZE - f->buff_offset < (int)size || f->buff_offset == -1) {
-				printf("Not enough data in buffer.\n");
 				refill_buffer(f);	
 			}
 
-			// Try to read from the buffer
-			printf("Read from buffer..\n");
-
+			// Try to read from the buffer 1 element of size size
 			char temp[(int)size];
 			strncpy(temp, f->buffer + f->buff_offset, (int)size);
-			// strcat(temp, '\0');
+			temp[(int)size] = '\0';
+
+			// Update the offset position
 			f->buff_offset += (int)size;
-			// memcpy(temp, f->buffer[f->buff_offset], (int)size);
-			// TODO end of line?
-			// strcat(content, temp);
-			printf("** %s\n", temp);
-			// try +=
-			nbelem--;			
+
+			// Concatenate every element in content
+			strcat(content, temp);
+
+			no_elements--;			
 		}
+
 		p = content;
+		free(content);
+		printf("Read: %s\n", p);
+		return nbelem;		
 	} else {
+		// Dennied access
 		return -1;
 	}
-	
-	return read(f->fd, p, size * nbelem);
 }
-
-/*
-int doit(int fd, const void *buf, size_t count){
-	write(fd,buf,count);
-	return 0;
-}*/
 
 /*
 Writes at most nbelem elements of size size to file access f, that has to have been opened with mode ”w”, taken at the address pointed by p.
