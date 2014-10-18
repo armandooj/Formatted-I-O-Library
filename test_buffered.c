@@ -9,6 +9,7 @@ int main (int argc, char *argv[])
   MY_FILE *f1;
   MY_FILE *f2;
   char *c = (char *)malloc(sizeof(char));
+  //char c;
   int result;
 
   // for the sake of simplicity we don't
@@ -24,10 +25,9 @@ int main (int argc, char *argv[])
   if (f2 == NULL)
       exit (-3);
 
-  result = my_fread(c, 3, 3, f1);
-  // result = my_fwrite(c, 1, 1, f2);
-
-  printf("%s\n", c);
+  result = my_fread(c, 10, 2, f1);
+  result = my_fwrite(c, 10, 2, f2);
+  printf("Test: %s\n", c);
   free(c);
  
   /*
@@ -44,5 +44,6 @@ int main (int argc, char *argv[])
   my_fclose(f1);
   my_fclose(f2);
   */
+  
   return 0;
 }

@@ -53,6 +53,7 @@ void refill_buffer(MY_FILE *f) {
 	// TODO validate it's not < 0
 	// TODO if there's something in the buffer, buffer offset is less than buffer size, then we have to keep that in the new buffer
 	read(f->fd, f->buffer, BUFFER_SIZE);
+	printf("Refill: %s\n", f->buffer);
 	f->buff_offset = 0;
 }
 
@@ -70,16 +71,17 @@ Reads at most nbelem elements of size size from file access f, that has to have 
 Returns the number of elements actually read, 0 if an end-of-file has been encountered before any element has been read and -1 if an error occured.
 */
 int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
-	
+
 	if (*f->mode == 'r') {
 		int no_elements = nbelem;
-		char *content = (char *)malloc(sizeof(char));
+		char *content = (char *)p;
 		
 		// Proceed reading one by one
 		while (no_elements > 0) {
 			// Not enough data in the buffer. We must "reload" it
+			printf("%d %d\n", BUFFER_SIZE - f->buff_offset, (int)size);
 			if (BUFFER_SIZE - f->buff_offset < (int)size || f->buff_offset == -1) {
-				refill_buffer(f);	
+				refill_buffer(f);
 			}
 
 			// Try to read from the buffer 1 element of size size
@@ -96,10 +98,8 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			no_elements--;			
 		}
 
-		p = content;
-		free(content);
-		printf("Read: %s\n", p);
-		return nbelem;		
+		printf("Read: %s\n", content);
+		return nbelem;
 	} else {
 		// Dennied access
 		return -1;
