@@ -9,6 +9,7 @@
 #define BUFFER_SIZE 64
 
 void refill_buffer(MY_FILE *f);
+char* concat(char *s1, char *s2);
 
 /*
 Opens an access to a file, where name is the path of the file and mode is either ”r” for read or ”w” for write. 
@@ -49,14 +50,6 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	return new_file;
 }
 
-void refill_buffer(MY_FILE *f) {
-	// TODO validate it's not < 0
-	// TODO if there's something in the buffer, buffer offset is less than buffer size, then we have to keep that in the new buffer
-	read(f->fd, f->buffer, BUFFER_SIZE);
-	printf("Refill: %s\n", f->buffer);
-	f->buff_offset = 0;
-}
-
 /*
 Closes the access to a file associated to f. Returns 0 upon success and -1 otherwise.
 */
@@ -79,26 +72,37 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		// Proceed reading one by one
 		while (no_elements > 0) {
 			// Not enough data in the buffer. We must "reload" it
-			printf("%d %d\n", BUFFER_SIZE - f->buff_offset, (int)size);
+			printf("\n%d %d\n", BUFFER_SIZE - f->buff_offset, (int)size);
 			if (BUFFER_SIZE - f->buff_offset < (int)size || f->buff_offset == -1) {
 				refill_buffer(f);
 			}
-
+			
+			char temp[(int)size + 1]; // TODO maybe use char* and free it each time
+			
+			// Custom strncpy(temp, f->buffer + f->buff_offset, (int)size);
 			// Try to read from the buffer 1 element of size size
-			char temp[(int)size];
-			strncpy(temp, f->buffer + f->buff_offset, (int)size);
-			temp[(int)size] = '\0';
+			int x = 0;
+			for (int i = f->buff_offset; i < f->buff_offset + size; i++) {
+				temp[x] = f->buffer[i];
+				x++;
+			}
+			temp[x] = '\0';
 
 			// Update the offset position
 			f->buff_offset += (int)size;
+			
+			// Concatenate every temp element in content
+			content = concat(content, temp);
+			content[f->buff_offset] = '\0';
+		
+			printf("content: %s\n", content);
 
-			// Concatenate every element in content
-			strcat(content, temp);
-
-			no_elements--;			
+			no_elements--;		
+			printf("buffer when exiting: %s\n", f->buffer);	
 		}
 
-		printf("Read: %s\n", content);
+		memcpy(p, content, size * nbelem + 1);
+		free(content);
 		return nbelem;
 	} else {
 		// Dennied access
@@ -111,8 +115,13 @@ Writes at most nbelem elements of size size to file access f, that has to have b
 Returns the number of elements actually written and -1 if an error occured.
 */
 int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
-	
-	return write(f->fd, p, size * nbelem);
+	if (*f->mode == 'w') {
+		return write(f->fd, p, size * nbelem);
+	}
+	else {
+		// Dennied access
+		return -1;
+	}
 }
 
 /*
@@ -120,4 +129,26 @@ Returns 1 if an end-of-file has been encountered during a previous read and 0 ot
 */
 int my_feof(MY_FILE *f) {
 	return 0;
+}
+
+
+/*
+Custom functions
+*/
+
+void refill_buffer(MY_FILE *f) {
+	// TODO validate it's not < 0
+	// TODO if there's something in the buffer, buffer offset is less than buffer size, then we have to keep that in the new buffer
+	read(f->fd, f->buffer, BUFFER_SIZE + 1);
+	f->buffer[BUFFER_SIZE] = '\0';
+	printf("Refill: %s\n", f->buffer);
+	f->buff_offset = 0;
+}
+
+char* concat(char *s1, char *s2) {
+    char *result = malloc(strlen(s1) + strlen(s2) + 1);
+    // TODO check for errors in malloc here
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
 }

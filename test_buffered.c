@@ -25,9 +25,9 @@ int main (int argc, char *argv[])
   if (f2 == NULL)
       exit (-3);
 
-  result = my_fread(c, 10, 2, f1);
-  result = my_fwrite(c, 10, 2, f2);
+  result = my_fread(c, 8, 4, f1);
   printf("Test: %s\n", c);
+  result = my_fwrite(c, 8, 4, f2);
   free(c);
  
   /*
