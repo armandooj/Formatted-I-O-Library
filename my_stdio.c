@@ -66,6 +66,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		int content_offset = 0;
 		int found_eof = 0;
 		char *content = (char *)p;
+		content[0] = '\0';
 		
 		// Proceed reading one by one
 		while (no_elements > 0) {	
@@ -73,8 +74,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			// First time - check if no element has bean read and we encountered an end of file
 			if (f->buff_offset == -1) {
 				found_eof = refill_buffer(f);
-				printf("found_eof: %d\n", found_eof);
-				if (found_eof == 1) {
+				if (found_eof == 2) {
 					return -1;
 				}
 			}			
@@ -93,10 +93,17 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			for (int i = f->buff_offset; i < f->buff_offset + size; i++) {
 				// End of file
 				if (f->buffer[i] == '\0') {
-					printf("END OF FILE\n");
-					no_elements = 0;
+					no_elements = 0;					
+					// For single chars, we need to return when end of line is found (nothing else to read)
+					if (size == 1 && nbelem == 1) {	
+						content[content_offset] = f->buffer[i];		
+						memcpy(p, content, 1);			
+						return 0;
+					} 
+
 					break;
 				}
+
 				temp[x] = f->buffer[i];
 				x++;
 			}
@@ -160,7 +167,10 @@ Custom functions
 
 
 /*
-Returns 1 if the end of file has been found, 0 otherwise.
+Returns 
+1 if the end of file has been found after reading something
+2 if the end of file has been found without reading anything
+0 otherwise
 */
 int refill_buffer(MY_FILE *f) {
 
@@ -197,7 +207,17 @@ int refill_buffer(MY_FILE *f) {
 	f->buff_offset = 0;
 
 	printf("Refill: %s\n", f->buffer);
-	return (result + offset == BUFFER_SIZE) ? 0 : 1;
+	
+	if (result + offset != BUFFER_SIZE) {
+		if (result == 0) {
+			return 2;
+		} else {
+			return 1;
+		}
+	} else {
+		return 0;
+	}	
+	// return (result + offset == BUFFER_SIZE) ? 0 : 1;
 }
 
 char* concat(char *s1, char *s2) {

@@ -26,12 +26,14 @@ int main (int argc, char *argv[])
       exit (-3);
 
   /*
-  result = my_fread(&c, 1, 1, f1);
+  result = my_fread(c, 10, 10, f1);
   printf("Result: %d\n", result);
-  printf("Test: %c\n", c);
-  result = my_fwrite(&c, 1, 1, f2);
+  printf("Test: %s\n", c);
+  result = my_fwrite(c, 10, 10, f2);
   //free(c);
   */
+
+  // TODO There's still an infinite loop when reading a really big source text
  
   result = my_fread(&c, 1, 1, f1);
   while (result == 1)
