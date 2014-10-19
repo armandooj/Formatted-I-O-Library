@@ -8,8 +8,8 @@ int main (int argc, char *argv[])
 {
   MY_FILE *f1;
   MY_FILE *f2;
-  char *c = (char *)malloc(sizeof(char));
-  //char c;
+  //char *c = (char *)malloc(sizeof(char) * 1024);
+  char c;
   int result;
 
   // for the sake of simplicity we don't
@@ -25,12 +25,14 @@ int main (int argc, char *argv[])
   if (f2 == NULL)
       exit (-3);
 
-  result = my_fread(c, 8, 4, f1);
-  printf("Test: %s\n", c);
-  result = my_fwrite(c, 8, 4, f2);
-  free(c);
- 
   /*
+  result = my_fread(&c, 1, 1, f1);
+  printf("Result: %d\n", result);
+  printf("Test: %c\n", c);
+  result = my_fwrite(&c, 1, 1, f2);
+  //free(c);
+  */
+ 
   result = my_fread(&c, 1, 1, f1);
   while (result == 1)
     {
@@ -43,7 +45,6 @@ int main (int argc, char *argv[])
       exit(-5);
   my_fclose(f1);
   my_fclose(f2);
-  */
   
   return 0;
 }
