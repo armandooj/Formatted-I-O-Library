@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
 
 // Printing
 #include <stdio.h>
@@ -11,6 +12,7 @@
 int refill_buffer(MY_FILE *f);
 int kernel_calls = 0;
 char* concat(char *s1, char *s2);
+char *str_replace(char *orig, char *rep, char *with);
 
 /*
 Opens an access to a file, where name is the path of the file and mode is either ”r” for read or ”w” for write. 
@@ -214,13 +216,102 @@ int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 }
 
 /*
-Returns 1 if an end-of-file has been encountered during a previous read and 0 otherwise.
+Writes to f the arguments given after format using the format given in format. 
+Returns the number of arguments successfully written or -1 upon error.
 */
-int my_feof(MY_FILE *f) {
-	// Internally, end of file happens when both buffer and file have been read.
-	return (f->found_eof && f->found_eob);
+int my_fprintf(MY_FILE *f, char *format, ...) {
+	va_list ap;
+	int d;
+	char c, *s;
+
+	char *parsed = format;
+	int parsed_size = 0;
+
+	va_start(ap, format);
+	while(*format)
+		switch(*format++) {			
+			case '%':
+			switch(*format++) {
+				case 's':		
+				s = va_arg(ap, char*);
+				parsed = str_replace(parsed, "%s", s);
+				break;
+
+				case 'd':
+				d = va_arg(ap, int);	
+				char num[5];
+				sprintf(num, "%d", d);
+				parsed = str_replace(parsed, "%d", num);
+				break;
+
+				case 'c':
+				c = (char)va_arg(ap, int);
+				char *str = (char *)malloc(sizeof(char) * 2);
+				str[0] = c;
+				str[1] = '\0';
+				parsed = str_replace(parsed, "%c", str);
+				free(str);
+				break;
+			}
+			break;
+
+			default:
+			break;
+		}
+
+	va_end(ap);
+
+	for (int i = 1; parsed[i] != '\0'; i++) {
+		parsed_size++;
+	}
+
+	return my_fwrite(parsed, strlen(parsed), 1, f);
 }
 
+/*
+Stores at the addresses given after format the values read from the access associated to f using the format given in format
+as described in the following. Returns the number of arguments successfully read or the value EOF if an end-of-file is 
+encountered before any value is read or upon error.
+*/
+int my_fscanf(MY_FILE *f, char *format, ...) {
+	va_list ap;
+	int d;
+	char *s;
+
+	char *parsed = format;
+	int parsed_size = 0;
+
+	va_start(ap, format);
+	while(*format)
+		switch(*format++) {			
+			case '%':
+			switch(*format++) {
+				/*
+				case 's':	
+				s = va_arg(ap, char*);
+				parsed = str_replace(parsed, "%s", s);
+				break;
+
+				case 'd':
+				d = va_arg(ap, int);				
+				parsed = str_replace(parsed, "%d", "1");
+				break;
+				*/
+
+				case 'c':
+				s = va_arg(ap, char *);
+				return my_fread(s, sizeof(char), 1, f);
+				break;
+			}
+			break;
+
+			default:
+			break;
+		}	
+
+	va_end(ap);
+	return 0;
+}
 
 /*
 Custom functions
@@ -286,4 +377,58 @@ int refill_buffer(MY_FILE *f) {
 
 int get_system_calls_count() {
 	return kernel_calls;
+}
+
+/*
+Returns 1 if an end-of-file has been encountered during a previous read and 0 otherwise.
+*/
+int my_feof(MY_FILE *f) {
+	// Internally, end of file happens when both buffer and file have been read.
+	return (f->found_eof && f->found_eob);
+}
+
+char *str_replace(char *orig, char *rep, char *with) {
+    char *result; // the return string
+    char *ins;    // the next insert point
+    char *tmp;    // varies
+    int len_rep;  // length of rep
+    int len_with; // length of with
+    int len_front; // distance between rep and end of last rep
+    int count;    // number of replacements
+
+    if (!orig)
+        return NULL;
+    if (!rep)
+        rep = "";
+    len_rep = strlen(rep);
+    if (!with)
+        with = "";
+    len_with = strlen(with);
+
+    ins = orig;
+    for (count = 0; (tmp = strstr(ins, rep)); ++count) {
+        ins = tmp + len_rep;
+    }
+
+    // first time through the loop, all the variable are set correctly
+    // from here on,
+    //    tmp points to the end of the result string
+    //    ins points to the next occurrence of rep in orig
+    //    orig points to the remainder of orig after "end of rep"
+    tmp = result = malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+
+    if (!result)
+        return NULL;
+
+    count = 1;
+
+    while (count--) {
+        ins = strstr(orig, rep);
+        len_front = ins - orig;
+        tmp = strncpy(tmp, orig, len_front) + len_front;
+        tmp = strcpy(tmp, with) + len_with;
+        orig += len_front + len_rep; // move to next "end of rep"
+    }
+    strcpy(tmp, orig);
+    return result;
 }
