@@ -4,7 +4,7 @@
 #include <string.h>
 
 // Printing
-#include <stdio.h>
+// #include <stdio.h>
 
 #define BUFFER_SIZE 64
 
@@ -22,6 +22,8 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	new_file->buffer = (char *)malloc(sizeof(char) * BUFFER_SIZE + 1);
 	new_file->name = name;
 	new_file->mode = mode;
+	new_file->found_eof = 0;
+	new_file->found_eob = 0;
 
 	// An offset of 0 is going to mean that we haven't read from the file yet
 	new_file->buff_offset = -1;
@@ -37,6 +39,8 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	}
 
 	int inf = open(name, flag);
+	kernel_calls++;
+
 	if (inf < 0) {
 		return NULL;
 	} else {
@@ -51,9 +55,14 @@ MY_FILE *my_fopen(char *name, char *mode) {
 Closes the access to a file associated to f. Returns 0 upon success and -1 otherwise.
 */
 int my_fclose(MY_FILE *f) {
-	// TODO group the reads and the reads in groups of 64 bytes 
-	// every 64 bytes we'll have a system call
-	return 0;
+	
+	kernel_calls++;
+	if (close(f->fd) == 0) {
+		free(f->buffer);
+		free(f);
+	}
+
+	return -1;
 }
 
 /*
@@ -93,13 +102,18 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			for (int i = f->buff_offset; i < f->buff_offset + size; i++) {
 				// End of file
 				if (f->buffer[i] == '\0') {
+					// Both end of buffer and end of file
+					if (f->found_eof == 1) {
+						f->found_eob = 1;
+					}
+				
 					no_elements = 0;					
 					// For single chars, we need to return when end of line is found (nothing else to read)
 					if (size == 1 && nbelem == 1) {	
 						content[content_offset] = f->buffer[i];		
 						memcpy(p, content, 1);			
 						return 0;
-					} 
+					}
 
 					break;
 				}
@@ -134,16 +148,6 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			}
 		}
 
-		/*
-		// For single chars, assign to p only the char - without the end of line
-		if (size == 1 && nbelem == 1) {
-			memcpy(p, content, 1);
-		} else {
-			memcpy(p, content, size * nbelem + 1);
-		}
-		
-		free(content);
-		*/
 		return nbelem;
 	} else {
 		// Dennied access
@@ -169,7 +173,8 @@ int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 Returns 1 if an end-of-file has been encountered during a previous read and 0 otherwise.
 */
 int my_feof(MY_FILE *f) {
-	return 0;
+	// Internally, end of file happens when both buffer and file have been read.
+	return (f->found_eof && f->found_eob);
 }
 
 
@@ -223,6 +228,7 @@ int refill_buffer(MY_FILE *f) {
 	f->buff_offset = 0;
 	
 	if (result + offset != BUFFER_SIZE) {
+		f->found_eof = 1;
 		// End of file found
 		if (result == 0) {
 			return 2;
@@ -232,4 +238,8 @@ int refill_buffer(MY_FILE *f) {
 	} else {
 		return 0;
 	}
+}
+
+int get_system_calls_count() {
+	return kernel_calls;
 }

@@ -35,7 +35,7 @@ int main (int argc, char *argv[])
 
   result = my_fread(&c, 1, 1, f1);
 
-  while (result == 1) {
+  while (!my_feof(f1)) {
     result = my_fwrite(&c, 1, 1, f2);
     if (result == -1)
       exit(-4);
@@ -44,9 +44,11 @@ int main (int argc, char *argv[])
 
   if (result == -1)
     exit(-5);
-  
+
   my_fclose(f1);
   my_fclose(f2);
+
+  printf("Sys calls: %d\n", get_system_calls_count());
   
   return 0;
 }
