@@ -24,27 +24,27 @@ int main (int argc, char *argv[])
   f2 = my_fopen(argv[2], "w");
   if (f2 == NULL)
       exit (-3);
-
+  
   /*
-  result = my_fread(c, 10, 10, f1);
+  result = my_fread(c, 15, 50, f1);
   printf("Result: %d\n", result);
   printf("Test: %s\n", c);
-  result = my_fwrite(c, 10, 10, f2);
-  //free(c);
+  result = my_fwrite(c, 15, 50, f2);
+  free(c);
   */
 
-  // TODO There's still an infinite loop when reading a really big source text
- 
   result = my_fread(&c, 1, 1, f1);
-  while (result == 1)
-    {
-      result = my_fwrite(&c, 1, 1, f2);
-      if (result == -1)
-          exit(-4);
+
+  while (result == 1) {
+    result = my_fwrite(&c, 1, 1, f2);
+    if (result == -1)
+      exit(-4);
       result = my_fread(&c, 1, 1, f1);
-    }
+  }
+
   if (result == -1)
-      exit(-5);
+    exit(-5);
+  
   my_fclose(f1);
   my_fclose(f2);
   

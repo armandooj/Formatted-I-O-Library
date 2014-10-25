@@ -9,6 +9,7 @@
 #define BUFFER_SIZE 64
 
 int refill_buffer(MY_FILE *f);
+int kernel_calls = 0;
 char* concat(char *s1, char *s2);
 
 /*
@@ -21,6 +22,7 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	new_file->buffer = (char *)malloc(sizeof(char) * BUFFER_SIZE + 1);
 	new_file->name = name;
 	new_file->mode = mode;
+
 	// An offset of 0 is going to mean that we haven't read from the file yet
 	new_file->buff_offset = -1;
 
@@ -29,14 +31,13 @@ MY_FILE *my_fopen(char *name, char *mode) {
 	if (*mode == 'r') {
 		flag = O_RDONLY;
 	} else if (*mode == 'w') {
-		flag = O_WRONLY;
+		flag = O_WRONLY | O_CREAT;
 	} else {
 		flag = 0;
 	}
 
 	int inf = open(name, flag);
 	if (inf < 0) {
-		printf("Error opening file %s.\n", name);
 		return NULL;
 	} else {
 		// Success, save the file descriptor for future access to the file
@@ -69,7 +70,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		content[0] = '\0';
 		
 		// Proceed reading one by one
-		while (no_elements > 0) {	
+		while (no_elements > 0) {
 
 			// First time - check if no element has bean read and we encountered an end of file
 			if (f->buff_offset == -1) {
@@ -77,7 +78,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 				if (found_eof == 2) {
 					return -1;
 				}
-			}			
+			}
 
 			// Not enough data in the buffer. We must "reload" it
 			if (BUFFER_SIZE - f->buff_offset < (int)size) {
@@ -85,9 +86,8 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 				found_eof = refill_buffer(f);
 			}
 
-			char temp[(int)size + 1]; // TODO maybe use char* and free it each time
+			char temp[(int)size + 1];
 			
-			// Custom strncpy(temp, f->buffer + f->buff_offset, (int)size);
 			// Try to read from the buffer 1 element of size size
 			int x = 0;
 			for (int i = f->buff_offset; i < f->buff_offset + size; i++) {
@@ -115,15 +115,26 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			content_offset += (int)size;
 			
 			// Concatenate every temp element in content
-			content = concat(content, temp);
-			content[content_offset] = '\0';
-		
-			printf("content: %s\n", content);
-			printf("buffer when exiting: %s\n\n", f->buffer);	
+			// content = concat(content, temp);
+			if (size == 1 && nbelem == 1) {
+				content = temp;
+			} else {
+				content = strcat(content, temp);
+			}
 
-			no_elements--;					
+			content[content_offset] = '\0';		
+
+			no_elements--;		
+
+			// For single chars, assign to p only the char - without the end of line
+			if (size == 1 && nbelem == 1) {
+				memcpy(p, content, 1);
+			} else {
+				memcpy(p, content, size * nbelem + 1);
+			}
 		}
 
+		/*
 		// For single chars, assign to p only the char - without the end of line
 		if (size == 1 && nbelem == 1) {
 			memcpy(p, content, 1);
@@ -132,6 +143,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		}
 		
 		free(content);
+		*/
 		return nbelem;
 	} else {
 		// Dennied access
@@ -144,7 +156,7 @@ Writes at most nbelem elements of size size to file access f, that has to have b
 Returns the number of elements actually written and -1 if an error occured.
 */
 int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
-	if (*f->mode == 'w') {		
+	if (*f->mode == 'w') {
 		return write(f->fd, p, size * nbelem);
 	}
 	else {
@@ -190,25 +202,28 @@ int refill_buffer(MY_FILE *f) {
 		// Read the rest from the file
 		char temp[BUFFER_SIZE - offset + 1];
 		result = read(f->fd, temp, BUFFER_SIZE - offset);
-		temp[BUFFER_SIZE - offset + 1] = '\0';
+		kernel_calls++;
+
+		f->buffer[result + offset] = '\0';
 
 		// Append it to buffer
 		int j = 0;
 		for (int i = offset; i < BUFFER_SIZE; i++) {
 			f->buffer[i] = temp[j];
 			j++;
-		}
-		f->buffer[BUFFER_SIZE] = '\0';
+		}		
 	} else {
-		result = read(f->fd, f->buffer, BUFFER_SIZE);		
+		// Actual kernel call
+		result = read(f->fd, f->buffer, BUFFER_SIZE);
+		kernel_calls++;		
+		// The buffer is not full
+		f->buffer[result] = '\0';
 	}
 
-	f->buffer[BUFFER_SIZE] = '\0';
 	f->buff_offset = 0;
-
-	printf("Refill: %s\n", f->buffer);
 	
 	if (result + offset != BUFFER_SIZE) {
+		// End of file found
 		if (result == 0) {
 			return 2;
 		} else {
@@ -216,14 +231,5 @@ int refill_buffer(MY_FILE *f) {
 		}
 	} else {
 		return 0;
-	}	
-	// return (result + offset == BUFFER_SIZE) ? 0 : 1;
-}
-
-char* concat(char *s1, char *s2) {
-    char *result = malloc(strlen(s1) + strlen(s2) + 1);
-    // TODO check for errors in malloc here
-    strcpy(result, s1);
-    strcat(result, s2);
-    return result;
+	}
 }
