@@ -74,13 +74,8 @@ Returns the number of elements actually read, 0 if an end-of-file has been encou
 int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 
 	if (*f->mode == 'r') {
-		// TODO (maybe)
-		if (size > BUFFER_SIZE) {
-			while (nbelem > 0) {
-				read(f->fd, p, size);
-				nbelem--;
-			}
-		} else {
+		if (size < BUFFER_SIZE) {
+
 			int no_elements = nbelem;
 			int content_offset = 0;
 			int found_eof = 0;
@@ -156,6 +151,9 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 					memcpy(p, content, size * nbelem + 1);
 				}
 			}
+		} else {
+			// If the buffer is not big enough for the requested size, use read()
+			read(f->fd, p, size * nbelem);
 		}
 		return nbelem;
 	} else {
@@ -234,14 +232,12 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 			switch(*format++) {
 				case 's':		
 				s = va_arg(ap, char*);
-				parsed = str_replace(parsed, "%s", s);
 				break;
 
 				case 'd':
 				d = va_arg(ap, int);	
 				char num[5];
 				sprintf(num, "%d", d);
-				parsed = str_replace(parsed, "%d", num);
 				break;
 
 				case 'c':
@@ -249,7 +245,6 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 				char *str = (char *)malloc(sizeof(char) * 2);
 				str[0] = c;
 				str[1] = '\0';
-				parsed = str_replace(parsed, "%c", str);
 				free(str);
 				break;
 			}
