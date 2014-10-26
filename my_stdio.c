@@ -226,18 +226,20 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 	int parsed_size = 0;
 
 	va_start(ap, format);
-	while(*format)
-		switch(*format++) {			
+	while (*format) {
+		switch (*format++) {			
 			case '%':
-			switch(*format++) {
+			switch (*format++) {
 				case 's':		
-				s = va_arg(ap, char*);
+				s = va_arg(ap, char *);
+				parsed = str_replace(parsed, "%s", s);
 				break;
 
 				case 'd':
 				d = va_arg(ap, int);	
 				char num[5];
 				sprintf(num, "%d", d);
+				parsed = str_replace(parsed, "%d", num);
 				break;
 
 				case 'c':
@@ -245,6 +247,7 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 				char *str = (char *)malloc(sizeof(char) * 2);
 				str[0] = c;
 				str[1] = '\0';
+				parsed = str_replace(parsed, "%c", str);
 				free(str);
 				break;
 			}
@@ -253,6 +256,7 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 			default:
 			break;
 		}
+	}
 
 	va_end(ap);
 
@@ -270,32 +274,51 @@ encountered before any value is read or upon error.
 */
 int my_fscanf(MY_FILE *f, char *format, ...) {
 	va_list ap;
-	int d;
-	char *s;
-
-	char *parsed = format;
-	int parsed_size = 0;
+	int *d;
+	char *s, c;
+	int pos;
 
 	va_start(ap, format);
-	while(*format)
-		switch(*format++) {			
+	while (*format) {
+		switch (*format++) {
 			case '%':
-			switch(*format++) {
-				/*
-				case 's':	
-				s = va_arg(ap, char*);
-				parsed = str_replace(parsed, "%s", s);
+			switch (*format++) {
+				
+				case 's':
+				// TODO
 				break;
 
 				case 'd':
-				d = va_arg(ap, int);				
-				parsed = str_replace(parsed, "%d", "1");
+				d = va_arg(ap, int *);				
+				pos = 0;
+
+				// Read the first one
+				my_fread(&c, 1, 1, f);
+				char *str;
+
+				printf("Read: %c\n", c);
+
+				// store it locally
+				str[pos] = c;
+				pos++;
+				str[pos] = '\0';
+
+				// Find the rest of the "number"		
+				while (!my_feof(f) && c != ' ') {
+					my_fread(&c, 1, 1, f);
+					str[pos] = c;
+					pos++;
+  				}
+
+  				// Convert to int and we're done
+				*d = atoi(str);
 				break;
-				*/
 
 				case 'c':
+				// Read only one char
 				s = va_arg(ap, char *);
-				return my_fread(s, sizeof(char), 1, f);
+				my_fread(&c, 1, 1, f);
+				s[0] = c;
 				break;
 			}
 			break;
@@ -303,15 +326,18 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 			default:
 			break;
 		}	
+	}
 
 	va_end(ap);
+
+	// TODO
 	return 0;
 }
+
 
 /*
 Custom functions
 */
-
 
 /*
 Returns 
