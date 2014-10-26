@@ -15,7 +15,6 @@ static_test: test_buffered_STATIC
 	./test_buffered_STATIC source.txt dest.txt ;
 
 
-
 #Dynamic 1
 
 dynamic:
@@ -23,7 +22,8 @@ dynamic:
 	gcc -o test_buffered_DYNAMIC test_buffered.c -L. libmy_stdio.so	
 
 dynamic_test: test_buffered_DYNAMIC
-	LD_PRELOAD=./libmy_stdio.so ./test_buffered_DYNAMIC source.txt dest.txt
+	export LD_LIBRARY_PATH=. ;\
+	./test_buffered_DYNAMIC source.txt dest.txt ;\
 	LD_PRELOAD=""
 
 dest:
