@@ -4,9 +4,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-// Printing
-#include <stdio.h>
-
 #define BUFFER_SIZE 64
 
 int refill_buffer(MY_FILE *f);
@@ -154,6 +151,7 @@ int my_fread(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 		} else {
 			// If the buffer is not big enough for the requested size, use read()
 			read(f->fd, p, size * nbelem);
+			kernel_calls++;
 		}
 		return nbelem;
 	} else {
@@ -170,6 +168,7 @@ int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 	if (*f->mode == 'w') {
 		// We can't write to buffer, write to the file
 		if (size > BUFFER_SIZE) {
+			kernel_calls++;
 			return write(f->fd, p, size * nbelem);
 		} else {
 			//return write(f->fd, p, size * nbelem);
@@ -181,7 +180,8 @@ int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 				if (BUFFER_SIZE - f->buff_offset < size) {
 
 					// Write to file what buffer had
-					write(f->fd, f->buffer, BUFFER_SIZE - (BUFFER_SIZE - f->buff_offset));
+					kernel_calls++;
+					write(f->fd, f->buffer, BUFFER_SIZE - (BUFFER_SIZE - f->buff_offset));					
 					f->buff_offset = 0;
 					f->buffer[0] = '\0';
 				} 
@@ -199,6 +199,7 @@ int my_fwrite(void *p, size_t size, size_t nbelem, MY_FILE *f) {
 			
 			// Write whatever is left
 			if (f->buffer[0] != '\0') {
+				kernel_calls++;
 				write(f->fd, f->buffer, BUFFER_SIZE - (BUFFER_SIZE - f->buff_offset));
 				f->buff_offset = 0;
 				f->buffer[0] = '\0';
@@ -238,7 +239,6 @@ int my_fprintf(MY_FILE *f, char *format, ...) {
 				case 'd':
 				d = va_arg(ap, int);	
 				char num[5];
-				sprintf(num, "%d", d);
 				parsed = str_replace(parsed, "%d", num);
 				break;
 
@@ -277,6 +277,7 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 	int *d;
 	char *s, c;
 	int pos;
+	int read_elements = 0;
 
 	va_start(ap, format);
 	while (*format) {
@@ -285,7 +286,8 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 			switch (*format++) {
 				
 				case 's':
-				// TODO
+				s = va_arg(ap, char *);
+				read_elements += my_fread(s, 1, 1, f);
 				break;
 
 				case 'd':
@@ -293,10 +295,8 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 				pos = 0;
 
 				// Read the first one
-				my_fread(&c, 1, 1, f);
+				read_elements += my_fread(&c, 1, 1, f);
 				char *str;
-
-				printf("Read: %c\n", c);
 
 				// store it locally
 				str[pos] = c;
@@ -305,7 +305,7 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 
 				// Find the rest of the "number"		
 				while (!my_feof(f) && c != ' ') {
-					my_fread(&c, 1, 1, f);
+					read_elements += my_fread(&c, 1, 1, f);
 					str[pos] = c;
 					pos++;
   				}
@@ -317,7 +317,7 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 				case 'c':
 				// Read only one char
 				s = va_arg(ap, char *);
-				my_fread(&c, 1, 1, f);
+				read_elements += my_fread(&c, 1, 1, f);
 				s[0] = c;
 				break;
 			}
@@ -330,8 +330,7 @@ int my_fscanf(MY_FILE *f, char *format, ...) {
 
 	va_end(ap);
 
-	// TODO
-	return 0;
+	return read_elements;
 }
 
 
