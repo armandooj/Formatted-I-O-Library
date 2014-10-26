@@ -36,7 +36,7 @@ int main (int argc, char *argv[])
   free(c);
   */
   
-  /*
+  
   // Buffered inputs/outputs - Test one  
   char c;
   result = my_fread(&c, 1, 1, f1);
@@ -53,7 +53,6 @@ int main (int argc, char *argv[])
 
   my_fclose(f1);
   my_fclose(f2);
-  */
 
 
   /*
